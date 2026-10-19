@@ -9,7 +9,7 @@
   <link rel="icon" href="grok_1792413580931.jpg">
   <link rel="apple-touch-icon" href="grok_1792413580931.jpg">
   <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQ3gXv3sN9H2yqQ6K1r3V4rj3M4r5lQ=" crossorigin="">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <title>QSOcat</title>
 </head>
 <body>
@@ -17,7 +17,7 @@
     <header class="topbar">
       <button class="icon-btn" id="backBtn" aria-label="Enrere">‹</button>
       <div class="brand"><img src="grok_1792413580931.jpg" alt="QSOcat"><div><strong>QSOcat</strong><small>Radioafició · VHF · UHF · HF</small></div></div>
-      <button class="icon-btn" id="installBtn" hidden aria-label="Instal·lar">⇩</button>
+      <button class="icon-btn" id="installBtn" hidden aria-label="Instal·lar QSOcat">⇩</button>
     </header>
     <main id="screen" aria-live="polite"></main>
     <nav class="bottom-nav" aria-label="Navegació principal">
@@ -30,8 +30,22 @@
   </div>
   <div id="toast" role="status"></div>
   <script src="repeaters.js"></script>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="app.js"></script>
   <script src="radio.js"></script>
+  <script>
+    (function(){
+      let deferred=null;
+      const btn=document.getElementById('installBtn');
+      function show(){if(btn && !window.matchMedia('(display-mode: standalone)').matches) btn.hidden=false;}
+      window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferred=e;show();});
+      window.addEventListener('appinstalled',function(){deferred=null;if(btn)btn.hidden=true;});
+      if(btn) btn.addEventListener('click',async function(){
+        if(deferred){deferred.prompt();try{await deferred.userChoice;}catch(e){}deferred=null;btn.hidden=true;}
+        else { alert('Per instal·lar QSOcat: obre el menú ⋮ del navegador i prem «Instal·lar aplicació» o «Afegir a pantalla d’inici».'); }
+      });
+      setTimeout(show,1500);
+    })();
+  </script>
 </body>
 </html>
