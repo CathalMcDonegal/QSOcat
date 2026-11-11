@@ -34,6 +34,7 @@
  };
  window.propRefresh=()=>refresh(true);
  window.getQSOcatPropagationBands=()=>Array.isArray(data?.bands)?data.bands.slice():[];
+ window.refreshQSOcatPropagation=()=>refresh(false);
  const oldRender=window.render;if(oldRender&&!oldRender.__propWrapped){const w=function(){oldRender();if((location.hash||'').slice(1)==='propagation')window.propagationView()};w.__propWrapped=true;window.render=w}
  const oldHome=window.home;if(oldHome&&!oldHome.__propWrapped){const h=function(){oldHome();const g=document.querySelector('#screen .grid');if(g&&!g.querySelector('[data-prop-card]')){const b=document.createElement('button');b.className='card';b.dataset.propCard='1';b.innerHTML='<div class="ico">☀️</div><b>Propagació HF</b><small>Flux solar, Kp i estat de les bandes</small>';b.onclick=()=>nav('propagation');g.appendChild(b)}};h.__propWrapped=true;window.home=h}
  window.addEventListener('hashchange',()=>{if((location.hash||'').slice(1)!=='propagation'&&poll){clearInterval(poll);poll=null}});
