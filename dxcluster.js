@@ -25,7 +25,7 @@
   const period=(new Date().getHours()>=7&&new Date().getHours()<19)?'day':'night';
   const label=period==='day'?'diürna':'nocturna';
   const quality=v=>{const z=String(v||'').toLowerCase();return z.includes('good')?3:z.includes('fair')?2:z.includes('poor')?1:0};
-  const names=bands.map(x=>({name:String(x.name||''),condition:x[period],score:quality(x[period]),count:spots.filter(s=>band(s)===String(x.name||'').replace(/\s/g,'')).length})).filter(x=>x.name&&x.score>0);
+  const names=bands.map(x=>({name:String(x.name||''),condition:x[period],score:quality(x[period]),count:spots.filter(s=>band(s)===String(x.name||'').replace(/\s/g,'')).length})).filter(x=>x.name&&x.score>0&&x.count>0);
   names.sort((a,b)=>(b.score-a.score)||(b.count-a.count));
   const top=names[0];
   if(!top){root.innerHTML='<div class="panel"><b>🎯 Banda recomanada</b><p class="dx-muted">No hi ha prou dades de propagació per prioritzar una banda ara mateix.</p></div>';return}
