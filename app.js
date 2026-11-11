@@ -83,6 +83,7 @@ function openRepeaterFromMap(i){selectedRepeater=i;nav('repeater')}
 function hf(){screen.innerHTML=`${shell('HF','Bandes de radioafició')}<div class="panel"><h3>Guia ràpida</h3><p style="color:var(--muted)">Les freqüències concretes d’ús depenen del pla de banda i de la normativa aplicable. Aquesta pantalla és una referència educativa.</p></div><div class="list">${bands.map(b=>`<div class="row"><div><b>${b[0]}</b><small style="display:block;color:var(--muted)">Zona aproximada ${b[1]}</small></div><span class="pill">HF</span></div>`).join('')}</div>${shell('Modes','Conceptes bàsics')}<div class="grid">${card('🎙️','SSB','Veu en banda lateral','manual')} ${card('〰️','CW','Morse','manual')} ${card('💻','FT8','Mode digital','manual')}</div>`}
 
 function log(){
+ const focusId=document.activeElement?.id,selectionStart=document.activeElement?.selectionStart,selectionEnd=document.activeElement?.selectionEnd;
  const data=loadLog();
  const q=(document.querySelector('#logSearch')?.value||'').trim().toUpperCase();
  const band=document.querySelector('#logBand')?.value||'ALL';
@@ -95,6 +96,7 @@ function log(){
  '<div class="panel log-filters"><div class="form"><label>Cerca per indicatiu, QTH o text<input id="logSearch" value="'+esc(q)+'" oninput="log()" placeholder="EA3..., Barcelona..."></label><label>Banda<select id="logBand" onchange="log()"><option value="ALL">Totes les bandes</option>'+bands.map(x=>'<option value="'+esc(x)+'" '+(band===x?'selected':'')+'>'+esc(x)+'</option>').join('')+'</select></label><label>Mode<select id="logMode" onchange="log()"><option value="ALL">Tots els modes</option>'+modes.map(x=>'<option value="'+esc(x)+'" '+(mode===x?'selected':'')+'>'+esc(x)+'</option>').join('')+'</select></label></div></div>'+
  '<div class="panel" style="margin-top:14px">'+(filtered.length?'<div class="list">'+filtered.map(x=>{const i=data.indexOf(x);return '<div class="row log-row"><div><b>'+esc(x.call||'—')+'</b><small style="display:block;color:var(--muted)">'+esc(x.date||'—')+' · '+esc(x.freq||'—')+' MHz · '+esc(x.band||'—')+' · '+esc(x.mode||'—')+'</small><small style="display:block;color:var(--muted)">QTH: '+esc(x.qth||'—')+' · RST: '+esc(x.rst||'—')+'</small>'+(x.notes?'<small style="display:block;color:var(--muted)">'+esc(x.notes)+'</small>':'')+'</div><button class="mini-btn" onclick="deleteQso('+i+')" aria-label="Eliminar QSO">✕</button></div>'}).join('')+'</div>':'<div class="empty">No hi ha contactes que coincideixin amb els filtres.</div>')+'</div>'+
  '<div class="panel"><small style="color:var(--muted)">El LOG es desa en aquest dispositiu. Exporta periòdicament ADIF o JSON per conservar una còpia i transferir contactes a altres programes.</small></div>';
+ if(focusId){const el=document.getElementById(focusId);if(el){el.focus();if(typeof selectionStart==='number'&&el.setSelectionRange)el.setSelectionRange(selectionStart,selectionEnd)}}
 }
 function deleteQso(i){const d=loadLog();if(!d[i])return;if(confirm('Vols eliminar el QSO amb '+(d[i].call||'aquesta estació')+'?')){d.splice(i,1);saveLog(d);log();toast('QSO eliminat')}}
 function adifField(n,v){v=String(v??'');return v?'<'+n+':'+v.length+'>'+v:''}
