@@ -1,7 +1,7 @@
 /* QSOcat · Mapa dels contactes registrats */
 function maidenheadToLatLon(locator){
  const s=String(locator||'').trim().toUpperCase();
- if(![4,6,8,10,12].includes(s.length)||! /^[A-R]{2}\d{2}[A-X]{2}(\d{2}[A-X]{2})?$/.test(s))return null;
+ if(![4,6,8,10,12].includes(s.length)||! /^[A-R]{2}\d{2}([A-X]{2}(\d{2}([A-X]{2}(\d{2})?)?)?)?$/.test(s))return null;
  let lon=-180,lat=-90,lonStep=20,latStep=10;
  for(let i=0;i<s.length;i+=2){
   const a=s[i],b=s[i+1],letters=(i===0||i%4===0),x=letters?a.charCodeAt(0)-65:Number(a),y=letters?b.charCodeAt(0)-65:Number(b);
