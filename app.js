@@ -22,7 +22,7 @@ function card(i,t,s,r){return `<button class="card" onclick="nav('${r}')"><div c
 function render(){
  document.querySelectorAll('.bottom-nav button').forEach(b=>b.classList.toggle('active',b.dataset.route===route));
  backBtn.style.visibility=historyStack.length?'visible':'hidden';
- const views={home,vhf,hf,log,tools,manual,settings,qso,calculator,repeater,mapView};
+ const views={home,vhf,hf,log,tools,manual,settings,qso,calculator,repeater,mapView,qsoMap};
  (views[route]||home)();
  window.scrollTo({top:0,behavior:'instant'});
 }
@@ -35,6 +35,7 @@ ${card('📡','VHF / UHF',`${repeaters.length} repetidors carregats`,'vhf')}
 ${card('🗺️','Mapa de repetidors','Veure els repetidors de Catalunya','mapView')}
 ${card('〰','HF','Bandes, modes i guia ràpida','hf')}
 ${card('📒','QSO / LOG',`${count} contactes guardats`,'log')}
+${card('🌍','Mapa de contactes','Localitzadors, distància i azimut','qsoMap')}
 ${card('🧮','Eines','Calculadores per a antenes i RF','tools')}
 ${card('📖','Manual','Funcionament i conceptes de ràdio','manual')}
 ${card('⚙️','Configuració','Indicatiu i preferències','settings')}</div>`;
@@ -104,7 +105,7 @@ function adifBand(q){const f=Number(String(q.freq||'').replace(',','.'));if((f>=
 function exportADIF(){
  const rows=loadLog();let out='ADIF Export from QSOcat\r\n<ADIF_VER:5>3.1.4<PROGRAMID:6>QSOcat<EOH>\r\n';
  rows.forEach(q=>{const dt=String(q.date||'').replace(/[-:T]/g,''),date=dt.length>=8?dt.slice(0,8):'',time=dt.length>=12?dt.slice(8,12):'';
- const fields=[adifField('CALL',q.call),adifField('QSO_DATE',date),adifField('TIME_ON',time),adifField('FREQ',q.freq),adifField('BAND',adifBand(q)),adifField('MODE',q.mode),adifField('RST_RCVD',q.rst),adifField('QTH',q.qth),adifField('STATION_CALLSIGN',q.ownCall),adifField('COMMENT',[q.repeater,q.notes].filter(Boolean).join(' · '))].filter(Boolean);
+ const fields=[adifField('CALL',q.call),adifField('QSO_DATE',date),adifField('TIME_ON',time),adifField('FREQ',q.freq),adifField('BAND',adifBand(q)),adifField('MODE',q.mode),adifField('RST_RCVD',q.rst),adifField('QTH',q.qth),adifField('GRIDSQUARE',q.locator),adifField('MY_GRIDSQUARE',q.ownLocator||localStorage.getItem('qsocat-own-locator')||''),adifField('STATION_CALLSIGN',q.ownCall),adifField('COMMENT',[q.repeater,q.notes].filter(Boolean).join(' · '))].filter(Boolean);
  out+=fields.join('')+'<EOR>\r\n'});
  const blob=new Blob([out],{type:'application/octet-stream'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='QSOcat-log.adi';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast(rows.length+' QSO exportats en ADIF');
 }
@@ -116,7 +117,7 @@ function parseADIF(txt){
  }
  if(current.CALL)records.push(current);
  return records.map(x=>{const d=x.QSO_DATE||'',t=(x.TIME_ON||'0000').padEnd(4,'0'),rawBand=(x.BAND||'').toLowerCase(),b=rawBand==='2m'?'VHF':rawBand==='70cm'?'UHF':rawBand?(rawBand.endsWith('m')?rawBand.replace('m',' m'):rawBand+' m'):'';
- return {call:x.CALL||'',date:d.length===8?d.slice(0,4)+'-'+d.slice(4,6)+'-'+d.slice(6,8)+'T'+t.slice(0,2)+':'+t.slice(2,4):'',freq:x.FREQ||'',band:b,mode:x.SUBMODE||x.MODE||'',rst:x.RST_RCVD||x.RST_SENT||'',qth:x.QTH||'',ownCall:x.STATION_CALLSIGN||x.MY_CALL||'',repeater:'',notes:x.COMMENT||''}});
+ return {call:x.CALL||'',date:d.length===8?d.slice(0,4)+'-'+d.slice(4,6)+'-'+d.slice(6,8)+'T'+t.slice(0,2)+':'+t.slice(2,4):'',freq:x.FREQ||'',band:b,mode:x.SUBMODE||x.MODE||'',rst:x.RST_RCVD||x.RST_SENT||'',qth:x.QTH||'',locator:x.GRIDSQUARE||'',ownLocator:x.MY_GRIDSQUARE||'',ownCall:x.STATION_CALLSIGN||x.MY_CALL||'',repeater:'',notes:x.COMMENT||''}});
 }
 async function importADIF(input){
  const file=input.files?.[0];if(!file)return;
@@ -127,7 +128,7 @@ async function importADIF(input){
  saveLog([...fresh,...existing]);log();toast(fresh.length+' QSO importats');
  }catch(e){console.error(e);toast('No s’ha pogut llegir el fitxer ADIF')}finally{input.value=''}
 }
-function qso(){const now=new Date(),d=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,16);const my=localStorage.getItem('qsocat-call')||'';const active=JSON.parse(sessionStorage.getItem('qsocat-active-repeater')||'null');const preset=active?`<div class="panel"><b>📻 Repetidor seleccionat:</b> ${esc(active.call)} · RX ${active.rx} · TX ${active.tx} · CTCSS ${active.tone}</div>`:'';screen.innerHTML=`${shell('Nou QSO','Registra el contacte')}${preset}<div class="panel"><form class="form" onsubmit="saveQso(event)"><label>Indicatiu *<input name="call" required autocapitalize="characters" placeholder="EA3XXXX"></label><label>Data i hora<input name="date" type="datetime-local" value="${d}"></label><label>Freqüència (MHz)<input name="freq" inputmode="decimal" value="${active?.rx||''}" placeholder="145.650"></label><label>Banda<select name="band"><option>VHF</option><option>UHF</option>${bands.map(b=>`<option>${b[0]}</option>`).join('')}</select></label><label>Mode<select name="mode"><option>FM</option><option>SSB</option><option>CW</option><option>FT8</option><option>FT4</option><option>AM</option><option>D-STAR</option><option>C4FM</option><option>DMR</option></select></label><label>RST<input name="rst" value="59"></label><label>QTH<input name="qth" placeholder="Localitat / locator"></label><label>Indicatiu propi<input name="ownCall" value="${esc(my)}" placeholder="EA3XXXX"></label><label>Repetidor<input name="repeater" value="${esc(active?.call||'')}" placeholder="Opcional"></label><label>Observacions<textarea name="notes" placeholder="Antena, potència, comentaris..."></textarea></label><div class="actions"><button class="btn" type="submit">💾 Desar QSO</button><button class="btn secondary" type="button" onclick="nav('log')">Cancel·lar</button></div></form></div>`}
+function qso(){const now=new Date(),d=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,16);const my=localStorage.getItem('qsocat-call')||'';const active=JSON.parse(sessionStorage.getItem('qsocat-active-repeater')||'null');const preset=active?`<div class="panel"><b>📻 Repetidor seleccionat:</b> ${esc(active.call)} · RX ${active.rx} · TX ${active.tx} · CTCSS ${active.tone}</div>`:'';screen.innerHTML=`${shell('Nou QSO','Registra el contacte')}${preset}<div class="panel"><form class="form" onsubmit="saveQso(event)"><label>Indicatiu *<input name="call" required autocapitalize="characters" placeholder="EA3XXXX"></label><label>Data i hora<input name="date" type="datetime-local" value="${d}"></label><label>Freqüència (MHz)<input name="freq" inputmode="decimal" value="${active?.rx||''}" placeholder="145.650"></label><label>Banda<select name="band"><option>VHF</option><option>UHF</option>${bands.map(b=>`<option>${b[0]}</option>`).join('')}</select></label><label>Mode<select name="mode"><option>FM</option><option>SSB</option><option>CW</option><option>FT8</option><option>FT4</option><option>AM</option><option>D-STAR</option><option>C4FM</option><option>DMR</option></select></label><label>RST<input name="rst" value="59"></label><label>QTH<input name="qth" placeholder="Localitat"></label><label>Locator Maidenhead<input name="locator" autocapitalize="characters" placeholder="JN01AB"></label><label>Indicatiu propi<input name="ownCall" value="${esc(my)}" placeholder="EA3XXXX"></label><label>Repetidor<input name="repeater" value="${esc(active?.call||'')}" placeholder="Opcional"></label><label>Observacions<textarea name="notes" placeholder="Antena, potència, comentaris..."></textarea></label><div class="actions"><button class="btn" type="submit">💾 Desar QSO</button><button class="btn secondary" type="button" onclick="nav('log')">Cancel·lar</button></div></form></div>`}
 function saveQso(e){e.preventDefault();const o=Object.fromEntries(new FormData(e.target).entries());o.call=o.call.trim().toUpperCase();o.ownCall=(o.ownCall||'').trim().toUpperCase();const data=loadLog(),key=[o.call,o.date,o.freq,o.mode].join('|').toUpperCase();if(data.some(x=>[x.call,x.date,x.freq,x.mode].join('|').toUpperCase()===key)&&!confirm('Aquest QSO sembla duplicat (mateix indicatiu, data, freqüència i mode). Vols desar-lo igualment?'))return;data.unshift(o);saveLog(data);if(o.ownCall)localStorage.setItem('qsocat-call',o.ownCall);sessionStorage.removeItem('qsocat-active-repeater');toast('QSO desat');nav('log',false)}
 function clearLog(){if(confirm('Vols esborrar tot el LOG?')){saveLog([]);render()}}
 function exportLog(){const rows=loadLog();const blob=new Blob([JSON.stringify(rows,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='QSOcat-log.json';a.click();URL.revokeObjectURL(a.href);toast('LOG exportat')}
