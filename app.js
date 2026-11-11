@@ -98,10 +98,11 @@ function log(){
 }
 function deleteQso(i){const d=loadLog();if(!d[i])return;if(confirm('Vols eliminar el QSO amb '+(d[i].call||'aquesta estació')+'?')){d.splice(i,1);saveLog(d);log();toast('QSO eliminat')}}
 function adifField(n,v){v=String(v??'');return v?'<'+n+':'+v.length+'>'+v:''}
+function adifBand(q){const f=Number(String(q.freq||'').replace(',','.'));if(f>=144&&f<148)return '2m';if(f>=430&&f<450)return '70cm';return String(q.band||'').replace(/\\s*m$/i,'')+'m'}
 function exportADIF(){
  const rows=loadLog();let out='ADIF Export from QSOcat\r\n<ADIF_VER:5>3.1.4<PROGRAMID:6>QSOcat<EOH>\r\n';
  rows.forEach(q=>{const dt=String(q.date||'').replace(/[-:T]/g,''),date=dt.length>=8?dt.slice(0,8):'',time=dt.length>=12?dt.slice(8,12):'';
- const fields=[adifField('CALL',q.call),adifField('QSO_DATE',date),adifField('TIME_ON',time),adifField('FREQ',q.freq),adifField('BAND',String(q.band||'').replace(/ ?m$/i,'')),adifField('MODE',q.mode),adifField('RST_RCVD',q.rst),adifField('QTH',q.qth),adifField('STATION_CALLSIGN',q.ownCall),adifField('COMMENT',[q.repeater,q.notes].filter(Boolean).join(' · '))].filter(Boolean);
+ const fields=[adifField('CALL',q.call),adifField('QSO_DATE',date),adifField('TIME_ON',time),adifField('FREQ',q.freq),adifField('BAND',adifBand(q)),adifField('MODE',q.mode),adifField('RST_RCVD',q.rst),adifField('QTH',q.qth),adifField('STATION_CALLSIGN',q.ownCall),adifField('COMMENT',[q.repeater,q.notes].filter(Boolean).join(' · '))].filter(Boolean);
  out+=fields.join('')+'<EOR>\r\n'});
  const blob=new Blob([out],{type:'application/octet-stream'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='QSOcat-log.adi';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast(rows.length+' QSO exportats en ADIF');
 }
@@ -109,7 +110,7 @@ function parseADIF(txt){
  const body=txt.replace(/<EOH[^>]*>/i,'<EOH>').split(/<EOH>/i).slice(1).join('<EOH>')||txt,records=[];let current={},re=/<([^:>]+):(\d+)(?::[^>]*)?>/g,m;
  while((m=re.exec(body))){const name=m[1].toUpperCase(),len=Number(m[2]),value=body.substr(re.lastIndex,len);re.lastIndex+=len;if(name==='EOR'){if(current.CALL)records.push(current);current={}}else current[name]=value}
  if(current.CALL)records.push(current);
- return records.map(x=>{const d=x.QSO_DATE||'',t=(x.TIME_ON||'0000').padEnd(4,'0'),b=x.BAND?(x.BAND.toLowerCase().includes('m')?x.BAND.toLowerCase():x.BAND+' m'):'';
+ return records.map(x=>{const d=x.QSO_DATE||'',t=(x.TIME_ON||'0000').padEnd(4,'0'),rawBand=(x.BAND||'').toLowerCase(),b=rawBand==='2m'?'VHF':rawBand==='70cm'?'UHF':rawBand?(rawBand.endsWith('m')?rawBand.replace('m',' m'):rawBand+' m'):'';
  return {call:x.CALL||'',date:d.length===8?d.slice(0,4)+'-'+d.slice(4,6)+'-'+d.slice(6,8)+'T'+t.slice(0,2)+':'+t.slice(2,4):'',freq:x.FREQ||'',band:b,mode:x.SUBMODE||x.MODE||'',rst:x.RST_RCVD||x.RST_SENT||'',qth:x.QTH||'',ownCall:x.STATION_CALLSIGN||x.MY_CALL||'',repeater:'',notes:x.COMMENT||''}});
 }
 async function importADIF(input){
