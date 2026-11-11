@@ -107,8 +107,11 @@ function exportADIF(){
  const blob=new Blob([out],{type:'application/octet-stream'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='QSOcat-log.adi';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast(rows.length+' QSO exportats en ADIF');
 }
 function parseADIF(txt){
- const body=txt.replace(/<EOH[^>]*>/i,'<EOH>').split(/<EOH>/i).slice(1).join('<EOH>')||txt,records=[];let current={},re=/<([^:>]+):(\d+)(?::[^>]*)?>/g,m;
- while((m=re.exec(body))){const name=m[1].toUpperCase(),len=Number(m[2]),value=body.substr(re.lastIndex,len);re.lastIndex+=len;if(name==='EOR'){if(current.CALL)records.push(current);current={}}else current[name]=value}
+ const body=txt.replace(/<EOH[^>]*>/i,'<EOH>').split(/<EOH>/i).slice(1).join('<EOH>')||txt,records=[];let current={},re=/<EOR>|<([^:>]+):(\d+)(?::[^>]*)?>/gi,m;
+ while((m=re.exec(body))){
+  if(m[0].toUpperCase()==='<EOR>'){if(current.CALL)records.push(current);current={};continue}
+  const name=m[1].toUpperCase(),len=Number(m[2]),value=body.substr(re.lastIndex,len);re.lastIndex+=len;current[name]=value;
+ }
  if(current.CALL)records.push(current);
  return records.map(x=>{const d=x.QSO_DATE||'',t=(x.TIME_ON||'0000').padEnd(4,'0'),rawBand=(x.BAND||'').toLowerCase(),b=rawBand==='2m'?'VHF':rawBand==='70cm'?'UHF':rawBand?(rawBand.endsWith('m')?rawBand.replace('m',' m'):rawBand+' m'):'';
  return {call:x.CALL||'',date:d.length===8?d.slice(0,4)+'-'+d.slice(4,6)+'-'+d.slice(6,8)+'T'+t.slice(0,2)+':'+t.slice(2,4):'',freq:x.FREQ||'',band:b,mode:x.SUBMODE||x.MODE||'',rst:x.RST_RCVD||x.RST_SENT||'',qth:x.QTH||'',ownCall:x.STATION_CALLSIGN||x.MY_CALL||'',repeater:'',notes:x.COMMENT||''}});
