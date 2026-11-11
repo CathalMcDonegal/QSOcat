@@ -98,7 +98,7 @@ function log(){
 }
 function deleteQso(i){const d=loadLog();if(!d[i])return;if(confirm('Vols eliminar el QSO amb '+(d[i].call||'aquesta estació')+'?')){d.splice(i,1);saveLog(d);log();toast('QSO eliminat')}}
 function adifField(n,v){v=String(v??'');return v?'<'+n+':'+v.length+'>'+v:''}
-function adifBand(q){const f=Number(String(q.freq||'').replace(',','.'));if(f>=144&&f<148||String(q.band).toUpperCase()==='VHF')return '2m';if(f>=430&&f<450||String(q.band).toUpperCase()==='UHF')return '70cm';return String(q.band||'').replace(/\\s*m$/i,'')+'m'}
+function adifBand(q){const f=Number(String(q.freq||'').replace(',','.'));if((f>=144&&f<148)||String(q.band||'').toUpperCase()==='VHF')return '2m';if((f>=430&&f<450)||String(q.band||'').toUpperCase()==='UHF')return '70cm';return String(q.band||'').replace(/\s*m$/i,'')+'m'}
 function exportADIF(){
  const rows=loadLog();let out='ADIF Export from QSOcat\r\n<ADIF_VER:5>3.1.4<PROGRAMID:6>QSOcat<EOH>\r\n';
  rows.forEach(q=>{const dt=String(q.date||'').replace(/[-:T]/g,''),date=dt.length>=8?dt.slice(0,8):'',time=dt.length>=12?dt.slice(8,12):'';
